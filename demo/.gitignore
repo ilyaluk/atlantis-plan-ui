@@ -1,0 +1,6 @@
+bin
+data
+gitea.ini
+
+stacks/*/providers.tf
+**/.terraform*

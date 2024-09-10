@@ -1,0 +1,1 @@
+resource "sdfsakfdhksajd" "cdjkjasdkjaskd" {}

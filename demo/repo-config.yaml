@@ -1,0 +1,33 @@
+---
+metrics:
+  prometheus:
+    endpoint: /metrics
+repos:
+  - id: /.*/
+    workflow: default
+    post_workflow_hooks:
+      - run: |
+          cd $ATLANTIS_DATA_DIR/../../
+          ./bin/atlantis-plan-ui \
+            -atlantis-config ./atlantis.yaml \
+            -plan-ui-url http://localhost:8080/ \
+            -plans-dir $ATLANTIS_DATA_DIR/plans \
+            -output-dir $ATLANTIS_DATA_DIR/plans-out \
+            -vcs-repo $BASE_REPO_OWNER/$BASE_REPO_NAME \
+            -vcs-pull $PULL_NUM
+        commands: plan
+workflows:
+  default:
+    plan:
+      steps:
+        - plan
+        # Save plans for visualization. Don't reuse plans from SHOWFILE,
+        # as they could be deleted by Atlantis on failed plan.
+        # Save plans to a directory outside data/repos dir, as this breaks some of Atlantis logic:
+        # https://github.com/runatlantis/atlantis/issues/2168
+        - run: |
+            PLANS_DIR=$ATLANTIS_DATA_DIR/plans/$BASE_REPO_OWNER/$BASE_REPO_NAME/$PULL_NUM/$REPO_REL_DIR
+            mkdir -p $PLANS_DIR
+            export TF_CLI_ARGS_show=-no-color
+            terraform show $PLANFILE > $PLANS_DIR/plan.txt
+            terraform show -json $PLANFILE > $PLANS_DIR/plan.json

@@ -1,0 +1,62 @@
+.accordion-button {
+    height: 2.5rem;
+}
+.stack-accordion-header {
+    background-color: #fff;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+.stack-accordion-header:hover {
+    z-index: 100;
+}
+.resource-accordion-button {
+    height: 2rem;
+}
+.resource-accordion-header {
+    position: sticky;
+    top: 2.5rem;
+}
+.accordion-button-light:not(.collapsed) {
+    color: var(--bs-accordion-color);
+    background-color: var(--bs-light);
+}
+.accordion-button-no-icon::after {
+    --bs-accordion-btn-icon: "";
+    --bs-accordion-btn-active-icon: "";
+}
+.opacity-20 {
+    opacity: 0.2;
+}
+.hscroll {
+    overflow: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+}
+.color-green {
+    color: var(--bs-green);
+}
+.color-orange {
+    color: var(--bs-orange);
+}
+.color-red {
+    color: var(--bs-red);
+}
+.color-gray {
+    color: var(--bs-gray);
+}
+.color-gray-dark {
+    color: var(--bs-gray-dark);
+}
+.color-purple {
+    color: var(--bs-purple);
+}
+.color-indigo {
+    color: var(--bs-indigo);
+}
+.color-blue {
+    color: var(--bs-blue);
+}
+.color-yellow {
+    color: var(--bs-yellow);
+}
