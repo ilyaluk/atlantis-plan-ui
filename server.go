@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io/fs"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -35,6 +36,6 @@ func runServe(addr string) error {
 	// otherwise StripPrefix will redirect /foo to foo, which will cause redirect loops
 	*servePath = strings.TrimRight(*servePath, "/")
 
-	fmt.Println("Serving UI on", addr)
+	log.Printf("Serving UI on %s%s", addr, *servePath)
 	return http.ListenAndServe(addr, http.StripPrefix(*servePath, mux))
 }
