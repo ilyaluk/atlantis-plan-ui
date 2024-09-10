@@ -20,7 +20,11 @@ import (
 	"go.etcd.io/bbolt"
 )
 
+var version = "dev"
+
 var (
+	printVersion = flag.Bool("version", false, "Print version and exit")
+
 	vcsRepo = flag.String("vcs-repo", "", "Repository name in the VCS")
 	vcsPull = flag.Int("vcs-pull", 0, "Pull request number in the VCS")
 
@@ -574,6 +578,11 @@ type uiDiff struct {
 
 func main() {
 	flag.Parse()
+
+	if *printVersion {
+		fmt.Println("atlantis-plan-ui", version)
+		return
+	}
 
 	if *serve != "" {
 		if err := runServe(*serve); err != nil {
