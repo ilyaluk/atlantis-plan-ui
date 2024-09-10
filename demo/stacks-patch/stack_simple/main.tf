@@ -53,7 +53,7 @@ import {
 }
 
 removed {
-  from = null_resource.to_be_forgetten
+  from = null_resource.to_be_forgotten
 
   lifecycle {
     destroy = false

@@ -35,7 +35,7 @@ resource "null_resource" "to_be_recreated_cbd" {
   }
 }
 
-resource "null_resource" "to_be_forgetten" {
+resource "null_resource" "to_be_forgotten" {
   triggers = {
     value = "1"
   }
