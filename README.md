@@ -14,6 +14,8 @@ Firstly, you need to install `atlantis-plan-ui` to your atlantis server environm
 Pick your preferred method (building in docker image, adding via Helm initConfig, etc). You can grab latest binary from
 [releases](https://github.com/ilyaluk/atlantis-plan-ui/releases) or build it yourself.
 
+Check out Helm values in `demo/helm_values.yaml` for an example of how to add it to your Helm chart.
+
 Then, add following to your repo-config:
 
 ```yaml
@@ -49,8 +51,17 @@ workflows:
             export TF_CLI_ARGS_show=-no-color
             terraform show $PLANFILE > $PLANS_DIR/plan.txt
             terraform show -json $PLANFILE > $PLANS_DIR/plan.json
-        # Replace terraform with ${TERRAGRUNT_TFPATH:-terraform} if you use Terragrunt and configure TFPATH this way.
+        # If you use Terragrunt, you can do something like this:
         # You don't need to run `terragrunt show` because it would be slower for no reason.
+        - env:
+            name: RENDERED_STACK
+            command: "terragrunt terragrunt-info 2>/dev/null | jq -r .WorkingDir"
+        - run: |
+            PLANS_DIR=$ATLANTIS_DATA_DIR/plans/$BASE_REPO_OWNER/$BASE_REPO_NAME/$PULL_NUM/$REPO_REL_DIR
+            mkdir -p $PLANS_DIR
+            export TF_CLI_ARGS_show=-no-color
+            ${TERRAGRUNT_TFPATH:-terraform} -chdir=$RENDERED_STACK show $PLANFILE > $PLANS_DIR/plan.txt
+            ${TERRAGRUNT_TFPATH:-terraform} -chdir=$RENDERED_STACK show -json $PLANFILE > $PLANS_DIR/plan.json
 ```
 
 This assumes that data dir is set by `$ATLANTIS_DATA_DIR`, and not from config/flags, adjust accordingly.

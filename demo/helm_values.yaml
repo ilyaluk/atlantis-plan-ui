@@ -1,0 +1,89 @@
+repoConfig: |
+  ---
+  repos:
+    - id: /.*/
+      # ...
+      workflow: default
+      post_workflow_hooks:
+        - run: |
+            atlantis-plan-ui \
+              -atlantis-config /etc/atlantis/atlantis.yaml \
+              -plan-ui-url $ATLANTIS_ATLANTIS_URL/plan-ui/ \
+              -plans-dir $ATLANTIS_DATA_DIR/plans \
+              -output-dir $ATLANTIS_DATA_DIR/plans-out \
+              -vcs-repo $BASE_REPO_OWNER/$BASE_REPO_NAME \
+              -vcs-pull $PULL_NUM
+          commands: plan
+  workflows:
+    default:
+      plan:
+        steps:
+          - plan
+          # Save plans for visualization. Don't reuse plans from SHOWFILE,
+          # as they could be deleted by Atlantis on failed plan.
+          # Save plans to a directory outside data/repos dir, as this breaks some of Atlantis logic:
+          # https://github.com/runatlantis/atlantis/issues/2168
+          - run: |
+              PLANS_DIR=$ATLANTIS_DATA_DIR/plans/$BASE_REPO_OWNER/$BASE_REPO_NAME/$PULL_NUM/$REPO_REL_DIR
+              mkdir -p $PLANS_DIR
+              export TF_CLI_ARGS_show=-no-color
+              terraform show $PLANFILE > $PLANS_DIR/plan.txt
+              terraform show -json $PLANFILE > $PLANS_DIR/plan.json  
+
+initConfig:
+  enabled: true
+  sizeLimit: 512Mi
+  script: |
+    #!/bin/sh
+    set -e
+    # ...
+    wget -O $INIT_SHARED_DIR/atlantis-plan-ui \
+      https://github.com/ilyaluk/atlantis-plan-ui/releases/download/v0.2.1/atlantis-plan-ui_linux_amd64
+    echo "{update_shasum} $INIT_SHARED_DIR/atlantis-plan-ui" | sha256sum -c
+    chmod +x "$INIT_SHARED_DIR/atlantis-plan-ui"
+
+ingress:
+  enabled: true
+  # ...
+  paths:
+    - path: /
+      service: atlantis
+      port: 80
+    - path: /plan-ui
+      service: atlantis-plan-ui
+      port: 80
+
+extraContainers:
+  - name: atlantis-plan-ui
+    image: alpine:3.20
+    ports:
+      - name: plan-ui
+        containerPort: 8080
+    volumeMounts:
+      - name: atlantis-data
+        readOnly: true
+        mountPath: /atlantis-data
+      - name: init-shared-path
+        readOnly: true
+        mountPath: /plugins
+    command:
+      - /plugins/atlantis-plan-ui
+      - -serve=:8080
+      - -serve-path=/plan-ui/
+      - -output-dir=/atlantis-data/plans-out
+
+extraManifests:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: atlantis-plan-ui
+    spec:
+      type: NodePort
+      ports:
+        - port: 80
+          targetPort: 8080
+          protocol: TCP
+          name: plan-ui
+      selector:
+        app: atlantis
+        release: atlantis
