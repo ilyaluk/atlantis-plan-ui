@@ -93,8 +93,7 @@ This is tested only in single-repo setup, additional adjustments might be needed
 ## Further work
 
 - [ ] Add API to Atlantis for grabbing pulls/locks/logs, adjust accordingly; [_issue_](https://github.com/runatlantis/atlantis/issues/4896)
-- [ ] Support for imports in plan
-- [ ] Support for state removals in plan (action type forget)
+- [ ] Support create-then-forget action once it's implemented in Terraform
 - [ ] Better/refactored frontend (help wanted, I'm not a frontend developer)
 
 ## Development

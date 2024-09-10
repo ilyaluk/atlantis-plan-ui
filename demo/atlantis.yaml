@@ -1,8 +1,9 @@
 atlantis-url: http://localhost:4141
-gitea-user: test
+gitea-user: atlantis
 gitea-base-url: http://localhost:3000
 gitea-page-size: 50
 repo-allowlist: '*'
 repo-config: repo-config.yaml
 data-dir: ../atlantis-data
 parallel-plan: true
+default-tf-version: v1.9.5

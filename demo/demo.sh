@@ -28,15 +28,22 @@ trap cleanup EXIT
   chmod +x ./gitea
 
   if [ ! -f ./atlantis ]; then
-    curl -LO "https://github.com/runatlantis/atlantis/releases/download/v0.29.0/atlantis_${GOOS}_${GOARCH}.zip"
-    unzip "atlantis_${GOOS}_${GOARCH}.zip"
-    rm "atlantis_${GOOS}_${GOARCH}.zip"
+    curl -o atlantis.zip -L "https://github.com/runatlantis/atlantis/releases/download/v0.29.0/atlantis_${GOOS}_${GOARCH}.zip"
+    unzip atlantis.zip atlantis
+    rm atlantis.zip
+  fi
+
+  if [ ! -f ./terraform ]; then
+    curl -o terraform.zip -L "https://releases.hashicorp.com/terraform/1.9.5/terraform_1.9.5_${GOOS}_${GOARCH}.zip"
+    unzip terraform.zip terraform
+    rm terraform.zip
   fi
 
   go build -o . ../../
 )
 
 rm -rf ./data
+rm -rf ./stacks/*/.terraform* || true
 
 ./bin/minio server ./data/minio &
 
@@ -45,14 +52,18 @@ GITEA_WORK_DIR=$PWD/data/gitea/ ./bin/gitea -c gitea.ini web &
 
 sleep 3
 ./bin/gitea -c gitea.ini admin user create \
-  --username test --password pass --email test@localhost --admin
+  --username atlantis --password atlantis --email atlantis@example.com --admin
 
 TOKEN=$(./bin/gitea -c gitea.ini admin user generate-access-token \
-  --username test --scopes write:repository,write:user,write:issue | \
+  --username atlantis --scopes write:repository,write:user,write:issue | \
   grep 'successfully created' | cut -d':' -f2 | tr -d ' ')
 echo "TOKEN=$TOKEN"
 
-curl --json '{"name":"atlantis-plan-ui-demo"}' "http://user:$TOKEN@localhost:3000/api/v1/user/repos"
+export CREDS="atlantis:$TOKEN"
+
+sleep 1
+curl --json '{"name":"plan-ui-demo"}' "http://$CREDS@localhost:3000/api/v1/user/repos"
+export REPO=atlantis/plan-ui-demo
 
 export AWS_ACCESS_KEY_ID=minioadmin AWS_SECRET_ACCESS_KEY=minioadmin
 export AWS_ENDPOINT_URL=http://localhost:9000
@@ -69,7 +80,7 @@ curl --json '{
     "http_method": "POST",
     "secret": "foobar"
   }
-}' "http://user:$TOKEN@localhost:3000/api/v1/repos/test/atlantis-plan-ui-demo/hooks"
+}' "http://$CREDS@localhost:3000/api/v1/repos/$REPO/hooks"
 
 export ATLANTIS_DATA_DIR=$PWD/data/atlantis
 export ATLANTIS_GITEA_TOKEN=$TOKEN
@@ -83,14 +94,14 @@ export ATLANTIS_GITEA_WEBHOOK_SECRET=foobar
   ./gen_states.sh
   for folder in $(find . -type d -depth 1); do
     # TODO: parallel
-    terraform -chdir="$folder" init
-    terraform -chdir="$folder" apply -auto-approve
+    ../bin/terraform -chdir="$folder" init
+    ../bin/terraform -chdir="$folder" apply -auto-approve
     # fix some weird drift from aws s3 provider
-    terraform -chdir="$folder" apply -auto-approve -refresh-only
+    ../bin/terraform -chdir="$folder" apply -auto-approve -refresh-only
   done
 )
 
-git clone "http://test:$TOKEN@0.0.0.0:3000/test/atlantis-plan-ui-demo.git" data/repo
+git clone "http://$CREDS@0.0.0.0:3000/$REPO.git" data/repo
 (
   cd data/repo
   cp -av ../../stacks/* .
@@ -106,6 +117,8 @@ git clone "http://test:$TOKEN@0.0.0.0:3000/test/atlantis-plan-ui-demo.git" data/
 
   # introduce drift
   aws s3api put-object-tagging --bucket tfstate --key stack_drift/drifting --tagging 'TagSet=[{Key=test,Value=manual_value}]'
+
+  echo -n "foobar" | aws s3 cp - s3://tfstate/stack_simple/import
 
   git checkout main
   git checkout -b feature/plan
@@ -124,16 +137,16 @@ curl --json '{
   "base": "main",
   "head": "feature/lock-stack",
   "title": "Lock stack_locked"
-}' "http://user:$TOKEN@localhost:3000/api/v1/repos/test/atlantis-plan-ui-demo/pulls"
+}' "http://$CREDS@localhost:3000/api/v1/repos/$REPO/pulls"
 sleep 1
 
 curl --json '{
   "base": "main",
   "head": "feature/plan",
   "title": "Test PR"
-}' "http://user:$TOKEN@localhost:3000/api/v1/repos/test/atlantis-plan-ui-demo/pulls"
+}' "http://$CREDS@localhost:3000/api/v1/repos/$REPO/pulls"
 sleep 10
 
-open http://localhost:3000/test/atlantis-plan-ui-demo/pulls/2 || true
+open "http://localhost:3000/$REPO/pulls/2" || true
 
 sleep 100000

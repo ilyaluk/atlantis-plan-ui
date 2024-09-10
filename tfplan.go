@@ -96,7 +96,7 @@ func parseTextPlan(fname string) (*textualValues, error) {
 		line := strings.TrimRightFunc(s.Text(), unicode.IsSpace)
 		switch state {
 		case stateMain:
-			if strings.HasPrefix(line, "  # ") {
+			if strings.HasPrefix(strings.TrimSpace(line), "# ") {
 				state = stateInResource
 				curDiffLines = []string{line}
 			}
@@ -156,13 +156,13 @@ func parseTextPlan(fname string) (*textualValues, error) {
 	}, nil
 }
 
-// getAddressFromTxtDiff gets the Terraform resource address from a start of line of text, dropping first 4 chars.
+// getAddressFromTxtDiff gets the Terraform resource address from a start of line of text, dropping spaces at start and next 2 chars.
 // Examples:
 // - `  # aws_vpc.this[0] will be created` -> `aws_vpc.this[0]`
 // - `  # aws_vpc.this["some string"].out["bar/baz"]: ...` -> `aws_vpc.this["some string"].out["bar/baz"]`
 // - `  + some_output = "test"` -> `some_output`
 func getAddressFromTxtDiff(s string) string {
-	s = s[4:] // trim `  [#-+~] ` prefix
+	s = strings.TrimSpace(s)[2:] // trim `  [#-+~] ` prefix
 
 	inQuoted := false
 	for i, ch := range s {

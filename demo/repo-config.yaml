@@ -29,5 +29,5 @@ workflows:
             PLANS_DIR=$ATLANTIS_DATA_DIR/plans/$BASE_REPO_OWNER/$BASE_REPO_NAME/$PULL_NUM/$REPO_REL_DIR
             mkdir -p $PLANS_DIR
             export TF_CLI_ARGS_show=-no-color
-            terraform show $PLANFILE > $PLANS_DIR/plan.txt
-            terraform show -json $PLANFILE > $PLANS_DIR/plan.json
+            $ATLANTIS_DATA_DIR/bin/terraform1.9.5 show $PLANFILE > $PLANS_DIR/plan.txt
+            $ATLANTIS_DATA_DIR/bin/terraform1.9.5 show -json $PLANFILE > $PLANS_DIR/plan.json

@@ -253,31 +253,33 @@ func convertStackPlan(tf *tfPlan, txt *textualValues) uiProjectDiffs {
 		}
 
 		ch := resCh.Change
+		if slices.Equal(ch.Actions, []string{"no-op"}) && ch.Importing == nil {
+			continue
+		}
+
 		if !slices.Equal(ch.Actions, []string{"no-op"}) {
 			changedAddrs[resCh.Address] = true
-
-			diff := txt.diffs[resCh.Address]
-			if diff == "" {
-				diff = defaultDiff
-			}
-
-			res.ResourceDiffs = append(res.ResourceDiffs, uiDiff{
-				Address: resCh.Address,
-				Actions: ch.Actions,
-				Diff:    txt.diffs[resCh.Address],
-			})
 		}
 
+		diff := txt.diffs[resCh.Address]
+		if diff == "" {
+			diff = defaultDiff
+		}
+
+		importID := ""
 		if ch.Importing != nil {
-			id := ch.Importing.ID
+			importID = ch.Importing.ID
 			if ch.Importing.Unknown {
-				id = "(unknown)"
+				importID = "(unknown)"
 			}
-			res.Imports = append(res.Imports, uiDiff{
-				Address:  resCh.Address,
-				ImportID: id,
-			})
 		}
+
+		res.ResourceDiffs = append(res.ResourceDiffs, uiDiff{
+			Address:  resCh.Address,
+			Actions:  ch.Actions,
+			Diff:     txt.diffs[resCh.Address],
+			ImportID: importID,
+		})
 	}
 
 	for _, resDr := range tf.ResourceDrift {
@@ -443,11 +445,14 @@ func renderComment(data uiData, hash string) (string, error) {
 {{ if gt .StacksWithDrifts 0 -}}
 * ↙️ With drifts: **{{ .StacksWithDrifts }}**
 {{ end -}}
+{{ if gt .StacksWithMoves 0 -}}
+* 🔁 With moves: **{{ .StacksWithMoves }}**
+{{ end -}}
 {{ if gt .StacksWithImports 0 -}}
 * ⤵️ With imports: **{{ .StacksWithImports }}**
 {{ end -}}
-{{ if gt .StacksWithMoves 0 -}}
-* 🔁 With moves: **{{ .StacksWithMoves }}**
+{{ if gt .StacksWithForgets 0 -}}
+* 🪦 With forgets: **{{ .StacksWithForgets }}**
 {{ end -}}
 `))
 
@@ -464,8 +469,9 @@ func renderComment(data uiData, hash string) (string, error) {
 		StacksWithZeroDiff      int
 		StacksWithOutputChanges int
 		StacksWithDrifts        int
-		StacksWithImports       int
 		StacksWithMoves         int
+		StacksWithImports       int
+		StacksWithForgets       int
 	}{
 		URL:          fmt.Sprint(*uiURL, "#", *vcsPull),
 		PermanentURL: fmt.Sprint(*uiURL, "#", *vcsPull, "_", hash),
@@ -501,6 +507,11 @@ func renderComment(data uiData, hash string) (string, error) {
 			}) {
 				templateData.StacksWithDeletes++
 			}
+			if slices.ContainsFunc(stack.ResourceDiffs, func(d uiDiff) bool {
+				return slices.Contains(d.Actions, "forget")
+			}) {
+				templateData.StacksWithForgets++
+			}
 		} else {
 			templateData.StacksWithZeroDiff++
 		}
@@ -510,11 +521,13 @@ func renderComment(data uiData, hash string) (string, error) {
 		if len(stack.DriftDiffs) > 0 {
 			templateData.StacksWithDrifts++
 		}
-		if len(stack.Imports) > 0 {
-			templateData.StacksWithImports++
-		}
 		if len(stack.Moves) > 0 {
 			templateData.StacksWithMoves++
+		}
+		if slices.ContainsFunc(stack.ResourceDiffs, func(d uiDiff) bool {
+			return d.ImportID != ""
+		}) {
+			templateData.StacksWithImports++
 		}
 	}
 
@@ -555,8 +568,6 @@ type uiProjectDiffs struct {
 	OutputDiffs   []uiDiff `json:"output_diffs,omitempty"`
 	DriftDiffs    []uiDiff `json:"drift_diffs,omitempty"`
 	Moves         []uiDiff `json:"moves,omitempty"`
-	Imports       []uiDiff `json:"imports,omitempty"`
-	Deletes       []uiDiff `json:"deletes,omitempty"`
 }
 
 type uiDiff struct {
@@ -572,7 +583,7 @@ type uiDiff struct {
 	// PreviousAddress is set for moves (and all other fields are empty), otherwise empty
 	PreviousAddress string `json:"previous_address,omitempty"`
 
-	// ImportID is set for imports (and all other fields are empty), otherwise empty
+	// ImportID is set for imports, action might be "no-op" in this case
 	ImportID string `json:"import_id,omitempty"`
 }
 

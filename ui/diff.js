@@ -2,8 +2,9 @@ export default {
     props: ['data'],
     computed: {
         lines() {
-            let x = 'qwe'
-            x.match(/ +[+]/)
+            if (!this.data) {
+                return ["For some reason, this object does not include textual diff. Please file an issue."]
+            }
             return this.data.split('\n')
         }
     },

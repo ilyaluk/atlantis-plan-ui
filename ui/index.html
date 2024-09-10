@@ -18,9 +18,9 @@
         </div>
         Loading…
     </h1>
-    <h5 class="mt-3" v-if="state.pr_num > 0">Showing plans from <a :href="state.pr_url">{{ state.pr_repo }}#{{ state.pr_num }}</a></h5>
+    <h5 class="mt-3" v-if="pull.prNum > 0">Showing plans from <a :href="pull.prURL">{{ pull.prRepo }}#{{ pull.prNum }}</a></h5>
     <div class="mt-3">
-        <Stats :stacks="sortedStacks"></Stats>
+        <Stats :pull="pull"></Stats>
     </div>
 
     <div class="mb-3 mt-3">
@@ -36,25 +36,24 @@
                 'bi-chevron-contract': expandedResources,
             }"></i> Resources
         </button>
-        <button v-if="showOutputsButton" @click="toggleOutputs" class="btn btn-l btn-sm ms-2" title="Show output changes">
-            <i :class="{ 'bi-eye': showOutputs, 'bi-eye-slash': !showOutputs }"></i>
+        <button v-if="pull.stacksWithOutputChanges.length" @click="toggleType('outputs')" class="btn btn-l btn-sm ms-2" title="Show output changes">
+            <i :class="{ 'bi-eye': show.outputs, 'bi-eye-slash': !show.outputs }"></i>
             <i class="bi-diagram-2-fill ms-2 color-blue"></i>
         </button>
-        <button v-if="showDriftsButton" @click="toggleDrifts" class="btn btn-l btn-sm ms-2" title="Show remote changes">
-            <i :class="{ 'bi-eye': showDrifts, 'bi-eye-slash': !showDrifts }"></i>
+        <button v-if="pull.stacksWithDrifts.length" @click="toggleType('drifts')" class="btn btn-l btn-sm ms-2" title="Show remote changes">
+            <i :class="{ 'bi-eye': show.drifts, 'bi-eye-slash': !show.drifts }"></i>
             <i class="bi-arrow-down-left-circle-fill ms-2 color-indigo"></i>
         </button>
-        <button v-if="showMovesButton" @click="toggleMoves" class="btn btn-l btn-sm ms-2" title="Show resource moves">
-            <i :class="{ 'bi-eye': showMoves, 'bi-eye-slash': !showMoves }"></i>
+        <button v-if="pull.stacksWithMoves.length" @click="toggleType('refactors')" class="btn btn-l btn-sm ms-2" title="Show refactors">
+            <i :class="{ 'bi-eye': show.refactors, 'bi-eye-slash': !show.refactors }"></i>
             <i class="bi-arrow-left-right ms-2 color-purple"></i>
+            <i class="bi-box-arrow-in-down-left ms-2 color-purple"></i>
+            <i class="bi-x-circle ms-2 color-purple"></i>
         </button>
     </div>
 
     <div class="accordion" v-for="item in sortedStacks" >
-        <Stack ref="stacks" :data="item"
-               :show-outputs="showOutputs" :show-drifts="showDrifts" :show-moves="showMoves"
-               :executable-name="state.executable_name"
-        ></Stack>
+        <Stack ref="stacks" :data="item" :show="show" :executable-name="pull.executableName"></Stack>
     </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js"
@@ -66,19 +65,21 @@
 <script type="module">
     import Stack from './stack.js'
     import Stats from './stats.js'
-    import common from './common.js'
+    import { Pull } from './models.js'
 
     const App = {
         components: { Stack, Stats },
         data() {
             return {
                 loading: true,
-                state: {},
+                pull: new Pull({}),
                 expandedStacks: false,
                 expandedResources: false,
-                showOutputs: true,
-                showDrifts: true,
-                showMoves: true,
+                show: {
+                    outputs: true,
+                    drifts: true,
+                    refactors: true,
+                }
             }
         },
         mounted() {
@@ -99,7 +100,7 @@
                     if (data.errors) {
                         throw JSON.stringify(data.errors)
                     }
-                    this.state = data
+                    this.pull = new Pull(data)
                     this.loading = false
 
                     await Vue.nextTick()
@@ -149,50 +150,22 @@
                 this.$refs.stacks.forEach((st) => { st.collapseAll() })
                 this.expandedResources = false
             },
-            toggleOutputs() {
-                this.showOutputs = !this.showOutputs
+            toggleType(name) {
+                this.show[name] = !this.show[name]
             },
-            toggleDrifts() {
-                this.showDrifts = !this.showDrifts
-            },
-            toggleMoves() {
-                this.showMoves = !this.showMoves
-            },
-
         },
         computed: {
-            showOutputsButton() {
-                if (!this.state.stacks) {
-                    return false
-                }
-                return common.stacksWithOutputChanges(this.state.stacks).length > 0
-            },
-            showDriftsButton() {
-                if (!this.state.stacks) {
-                    return false
-                }
-                return common.stacksWithDrifts(this.state.stacks).length > 0
-            },
-            showMovesButton() {
-                if (!this.state.stacks) {
-                    return false
-                }
-                return common.stacksWithMoves(this.state.stacks).length > 0
-            },
             sortedStacks() {
-                if (!this.state.stacks) {
-                    return []
-                }
                 let sortStacks = (ss) => {
                     ss.sort((l, r) => l.path.localeCompare(r.path))
                 }
-                let changed = common.stacksWithAnyChange(this.state.stacks)
+                let changed = this.pull.stacksWithAnyChange
                 sortStacks(changed)
-                let errored = common.erroredStacks(this.state.stacks)
+                let errored = this.pull.erroredStacks
                 sortStacks(errored)
-                let locked = common.lockedStacks(this.state.stacks)
+                let locked = this.pull.lockedStacks
                 sortStacks(locked)
-                let zerodiff = common.stacksWithZeroDiff(this.state.stacks)
+                let zerodiff = this.pull.stacksWithZeroDiff
                 sortStacks(zerodiff)
                 return [].concat(changed, errored, locked, zerodiff)
             },

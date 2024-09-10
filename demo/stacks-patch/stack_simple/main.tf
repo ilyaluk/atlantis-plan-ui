@@ -39,3 +39,23 @@ resource "null_resource" "to_be_recreated_cbd" {
     create_before_destroy = true
   }
 }
+
+resource "aws_s3_object" "to_be_imported" {
+  bucket = "tfstate"
+  key    = "stack_simple/import"
+
+  content = "foobar"
+}
+
+import {
+  id = "tfstate/stack_simple/import"
+  to = aws_s3_object.to_be_imported
+}
+
+removed {
+  from = null_resource.to_be_forgetten
+
+  lifecycle {
+    destroy = false
+  }
+}

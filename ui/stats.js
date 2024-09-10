@@ -1,48 +1,57 @@
 import Counter from "./counter.js";
-import common from './common.js'
+import {Pull} from "./models.js";
+
 
 export default {
     components: { Counter },
-    props: ['stacks'],
+    props: {
+        pull: {
+            type: Pull,
+            default: new Pull({}),
+        }
+    },
     computed: {
-        counters() {
-            return {
-                diffs: common.stacksWithAnyChange(this.stacks).length,
-                creates: common.stacksWithChange(this.stacks, 'create').length,
-                updates: common.stacksWithChange(this.stacks, 'update').length,
-                deletes: common.stacksWithChange(this.stacks, 'delete').length,
-                zerodiff: common.stacksWithZeroDiff(this.stacks).length,
-                outputs: common.stacksWithOutputChanges(this.stacks).length,
-                drifts: common.stacksWithDrifts(this.stacks).length,
-                moves: common.stacksWithMoves(this.stacks).length,
-                locked: common.lockedStacks(this.stacks).length,
-                errored: common.erroredStacks(this.stacks).length,
-            }
-        },
+        diffs() { return this.pull.stacksWithAnyChange.length },
+        creates() { return this.pull.stacksWithChange('create').length },
+        updates() { return this.pull.stacksWithChange('update').length },
+        deletes() { return this.pull.stacksWithChange('delete').length },
+        zerodiff() { return this.pull.stacksWithZeroDiff.length },
+        outputs() { return this.pull.stacksWithOutputChanges.length },
+        drifts() { return this.pull.stacksWithDrifts.length },
+        moves() { return this.pull.stacksWithMoves.length },
+        imports() { return this.pull.stacksWithImports.length },
+        forgets() { return this.pull.stacksWithForgets.length },
+        locked() { return this.pull.lockedStacks.length },
+        errored() { return this.pull.erroredStacks.length },
     },
     template: `
-        <span class="h6">Total stacks: {{ stacks?.length }}</span>
-        <span class="h6 ms-2 me-2">With</span>
-        <Counter v-if="counters.creates" color="green" icon="patch-plus-fill" nomono
-                :value="'creates: ' + counters.creates"></Counter>
-        <Counter v-if="counters.updates" color="orange" icon="patch-exclamation-fill" nomono
-                :value="'updates: ' + counters.updates"></Counter>
-        <Counter v-if="counters.deletes" color="red" icon="patch-minus-fill" nomono
-                :value="'deletes: ' + counters.deletes"></Counter>
-        <Counter v-if="counters.diffs" color="gray-dark" icon="asterisk" nomono
-                :value="'any diffs: ' + counters.diffs"></Counter>
-        <Counter v-if="counters.zerodiff" color="gray" icon="patch-check-fill" nomono
-                :value="'zero-diff: ' + counters.zerodiff"></Counter>
+        <span class="h6 me-2">Total stacks: {{ this.pull.stacks.length }}</span>
+        <Counter v-if="errored" color="yellow" icon="exclamation-octagon-fill" nomono
+                :value="'errored: ' + errored"></Counter>
+        <Counter v-if="locked" color="yellow" icon="hourglass-bottom" nomono
+                :value="'locked: ' + locked"></Counter>
         <br>
-        <Counter v-if="counters.outputs" color="blue" icon="diagram-2-fill" nomono
-                :value="'output changes: ' + counters.outputs"></Counter>
-        <Counter v-if="counters.drifts" color="indigo" icon="arrow-down-left-circle-fill" nomono
-                :value="'remote changes: ' + counters.drifts"></Counter>
-        <Counter v-if="counters.moves" color="purple" icon="arrow-left-right" nomono
-                :value="'moves: ' + counters.moves"></Counter>
-        <Counter v-if="counters.errored" color="yellow" icon="exclamation-octagon-fill" nomono
-                :value="'errored: ' + counters.errored"></Counter>
-        <Counter v-if="counters.locked" color="yellow" icon="hourglass-bottom" nomono
-                :value="'locked: ' + counters.locked"></Counter>
+        <span class="h6 me-2">With</span>
+        <Counter v-if="creates" color="green" icon="patch-plus-fill" nomono
+                :value="'creates: ' + creates"></Counter>
+        <Counter v-if="updates" color="orange" icon="patch-exclamation-fill" nomono
+                :value="'updates: ' + updates"></Counter>
+        <Counter v-if="deletes" color="red" icon="patch-minus-fill" nomono
+                :value="'deletes: ' + deletes"></Counter>
+        <Counter v-if="diffs" color="gray-dark" icon="asterisk" nomono
+                :value="'any diffs: ' + diffs"></Counter>
+        <Counter v-if="zerodiff" color="gray" icon="patch-check-fill" nomono
+                :value="'zero-diff: ' + zerodiff"></Counter>
+        <br>
+        <Counter v-if="outputs" color="blue" icon="diagram-2-fill" nomono
+                :value="'output changes: ' + outputs"></Counter>
+        <Counter v-if="drifts" color="indigo" icon="arrow-down-left-circle-fill" nomono
+                :value="'remote changes: ' + drifts"></Counter>
+        <Counter v-if="moves" color="purple" icon="arrow-left-right" nomono
+                :value="'moves: ' + moves"></Counter>
+        <Counter v-if="imports" color="purple" icon="box-arrow-in-down-left" nomono
+                :value="'imports: ' + imports"></Counter>
+        <Counter v-if="forgets" color="purple" icon="x-circle" nomono
+                :value="'forgets: ' + forgets"></Counter>
 `
 }

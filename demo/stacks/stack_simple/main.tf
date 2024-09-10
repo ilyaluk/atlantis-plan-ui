@@ -34,3 +34,9 @@ resource "null_resource" "to_be_recreated_cbd" {
     create_before_destroy = true
   }
 }
+
+resource "null_resource" "to_be_forgetten" {
+  triggers = {
+    value = "1"
+  }
+}
