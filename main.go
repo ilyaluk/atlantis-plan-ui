@@ -284,7 +284,7 @@ func convertStackPlan(tf *tfPlan, txt *textualValues) uiProjectDiffs {
 
 		diff := txt.drifts[resDr.Address]
 		if diff == "" {
-			diff = defaultDiff
+			diff = "No textual diff available for this drift. Most likely terraform did not include it in the plan."
 		}
 
 		res.DriftDiffs = append(res.DriftDiffs, uiDiff{
