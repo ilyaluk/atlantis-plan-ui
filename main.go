@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"golang.org/x/net/html"
@@ -80,6 +81,10 @@ func run() error {
 	log.Println("opened Atlantis DB")
 
 	pull, err := getPull(db, *vcsRepo, *vcsPull)
+	if errors.Is(err, pullNotFound) {
+		log.Println("pull not found, probably no stacks affected")
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("failed to get pull info: %w", err)
 	}
@@ -139,6 +144,8 @@ func getAtlantisDB(dbPath string) (*bbolt.DB, error) {
 	return db, nil
 }
 
+var pullNotFound = fmt.Errorf("pull not found")
+
 func getPull(db *bbolt.DB, repo string, num int) (models.PullStatus, error) {
 	var pull models.PullStatus
 	err := db.View(func(tx *bbolt.Tx) error {
@@ -154,7 +161,7 @@ func getPull(db *bbolt.DB, repo string, num int) (models.PullStatus, error) {
 			return err
 		}
 		if pullVal == nil {
-			return fmt.Errorf("pull %s#%d not found", repo, num)
+			return pullNotFound
 		}
 		return json.Unmarshal(pullVal, &pull)
 	})
