@@ -427,8 +427,6 @@ func renderComment(data uiData, hash string) (string, error) {
 	t := template.Must(template.New("comment").Parse(`
 ## [↗️ Plans viewer]({{ .URL }})
 
-<sup>[permalink]({{ .PermanentURL }})</sup>
-
 * Total stacks: **{{ .TotalStacks }}**
 {{ if gt .StacksErrored 0 -}}
 * ⚠️ With plan errors: **{{ .StacksErrored }}**
@@ -465,7 +463,6 @@ func renderComment(data uiData, hash string) (string, error) {
 
 	var templateData = struct {
 		URL                     string
-		PermanentURL            string
 		TotalStacks             int
 		StacksErrored           int
 		StacksLocked            int
@@ -480,9 +477,8 @@ func renderComment(data uiData, hash string) (string, error) {
 		StacksWithImports       int
 		StacksWithForgets       int
 	}{
-		URL:          fmt.Sprint(*uiURL, "#", *vcsPull),
-		PermanentURL: fmt.Sprint(*uiURL, "#", *vcsPull, "_", hash),
-		TotalStacks:  len(data.Stacks),
+		URL:         fmt.Sprint(*uiURL, "#", *vcsPull, "_", hash),
+		TotalStacks: len(data.Stacks),
 	}
 
 	for _, stack := range data.Stacks {
