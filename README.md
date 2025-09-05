@@ -12,7 +12,8 @@ Allows you to visualize Terraform plans from Atlantis. A small web UI that shows
 Firstly, you need to install `atlantis-plan-ui` to your atlantis server environment. `atlantis-plan-ui` is a single binary.
 
 Pick your preferred method (building in docker image, adding via Helm initConfig, etc). You can grab latest binary from
-[releases](https://github.com/ilyaluk/atlantis-plan-ui/releases) or build it yourself.
+[releases](https://github.com/ilyaluk/atlantis-plan-ui/releases) or build it yourself. You can also use prebuilt docker
+image published in ghcr.io/ilyaluk/atlantis-plan-ui.
 
 Check out Helm values in `demo/helm_values.yaml` for an example of how to add it to your Helm chart.
 
