@@ -50,6 +50,10 @@ docker_manifests:
     image_templates:
       - ghcr.io/ilyaluk/atlantis-plan-ui:{{ .Version }}-amd64
       - ghcr.io/ilyaluk/atlantis-plan-ui:{{ .Version }}-arm64v8
+  - name_template: ghcr.io/ilyaluk/atlantis-plan-ui:latest
+    image_templates:
+      - ghcr.io/ilyaluk/atlantis-plan-ui:{{ .Version }}-amd64
+      - ghcr.io/ilyaluk/atlantis-plan-ui:{{ .Version }}-arm64v8
 
 changelog:
   disable: true
