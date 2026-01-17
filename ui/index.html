@@ -52,6 +52,10 @@
         </button>
     </div>
 
+    <div class="accordion">
+        <Resources ref="resourcesIndex" :resources-index="pull.resourcesIndex"></Resources>
+    </div>
+
     <div class="accordion" v-for="item in sortedStacks" >
         <Stack ref="stacks" :data="item" :show="show" :executable-name="pull.executableName"></Stack>
     </div>
@@ -65,10 +69,11 @@
 <script type="module">
     import Stack from './stack.js'
     import Stats from './stats.js'
+    import Resources from './resources.js'
     import { Pull } from './models.js'
 
     const App = {
-        components: { Stack, Stats },
+        components: { Stack, Stats, Resources },
         data() {
             return {
                 loading: true,

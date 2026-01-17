@@ -10,6 +10,10 @@ class Pull {
             this.stacks.push(new Stack(stackRaw))
         }
 
+        this.resourcesIndex = (raw["resources_index"] || [])
+            .map((r) => new ResourceIndex(r))
+            .sort((l, r) => l.address.localeCompare(r.address))
+
         console.log(this)
     }
 
@@ -146,4 +150,18 @@ class Diff {
     }
 }
 
-export { Pull, Stack, Diff }
+class ResourceIndex {
+    constructor(raw) {
+        this.address = raw["address"]
+        this.stacks = (raw["stacks"] || [])
+            .map((s) => sanitize(s))
+            .sort((l, r) => l.localeCompare(r))
+    }
+
+    get addressSanitized() {
+        return sanitize(this.address)
+    }
+}
+
+
+export { Pull, Stack, Diff, ResourceIndex }

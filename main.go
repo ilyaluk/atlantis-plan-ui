@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"slices"
 	"strings"
 	"text/template"
@@ -194,7 +195,49 @@ func convertPull(db *bbolt.DB, flags *atlantisFlags, pull models.PullStatus) (ui
 		}
 		res.Stacks = append(res.Stacks, uiPrj)
 	}
+	res.ResourcesIndex = buildResourcesIndex(res.Stacks)
+
 	return res, nil
+}
+
+func buildResourcesIndex(stacks []uiStack) []uiResourceIndex {
+	index := make(map[string]map[string]struct{})
+
+	re := regexp.MustCompile(`\[[^]]*]`)
+	populateIndex := func(path string, diffs []uiDiff) {
+		for _, diff := range diffs {
+			maskedAddr := re.ReplaceAllString(diff.Address, "")
+			if _, ok := index[maskedAddr]; !ok {
+				index[maskedAddr] = make(map[string]struct{})
+			}
+			index[maskedAddr][path] = struct{}{}
+		}
+	}
+
+	for _, stack := range stacks {
+		if stack.PlanError || stack.LockURL != "" {
+			continue
+		}
+
+		populateIndex(stack.Path, stack.ResourceDiffs)
+		populateIndex(stack.Path, stack.DriftDiffs)
+		populateIndex(stack.Path, stack.Moves)
+	}
+
+	var res []uiResourceIndex
+	for address, stackSet := range index {
+		var stackList []string
+		for path := range stackSet {
+			stackList = append(stackList, path)
+		}
+
+		res = append(res, uiResourceIndex{
+			Address: address,
+			Stacks:  stackList,
+		})
+	}
+
+	return res
 }
 
 func convertStack(pull models.PullStatus, prj models.ProjectStatus, locks map[string]*models.ProjectLock, logURLs map[string]string, atlantisURL string) (uiStack, error) {
@@ -549,7 +592,8 @@ type uiData struct {
 	PRNum  int    `json:"pr_num"`
 	PRURL  string `json:"pr_url"`
 
-	Stacks []uiStack `json:"stacks"`
+	Stacks         []uiStack         `json:"stacks"`
+	ResourcesIndex []uiResourceIndex `json:"resources_index"`
 }
 
 type uiStack struct {
@@ -588,6 +632,11 @@ type uiDiff struct {
 
 	// ImportID is set for imports, action might be "no-op" in this case
 	ImportID string `json:"import_id,omitempty"`
+}
+
+type uiResourceIndex struct {
+	Address string   `json:"address"`
+	Stacks  []string `json:"stacks"`
 }
 
 func main() {
