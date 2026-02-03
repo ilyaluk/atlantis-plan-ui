@@ -79,6 +79,37 @@ Adjust `-plan-ui-url` in repo-config accordingly, it will be used in PR comments
 
 You can check out `demo/` folder for a complete e2e example with Gitea, Atlantis and Atlantis Plan UI.
 
+## Drift Detection Mode
+
+In addition to visualizing PR plans, atlantis-plan-ui can visualize drift detection plans. This is useful for scheduled drift detection runs outside of Atlantis.
+
+### Processing Drift Plans
+
+Use `process-drift` to process plan files from a directory and generate JSON files for the UI:
+
+```bash
+atlantis-plan-ui process-drift \
+  -plans-dir /path/to/plans \
+  -output-dir /path/to/output \
+  -drift-id my-drift-run
+```
+
+The `-plans-dir` should contain subdirectories with `plan.json` and `plan.txt` files (the same format as Atlantis plans). The directory structure determines stack names in the UI.
+
+### Local Visualization
+
+For quick local visualization of drift plans, use `visualize-drifts` which combines processing and serving in one command:
+
+```bash
+atlantis-plan-ui visualize-drifts -plans-dir /path/to/plans
+```
+
+This will:
+1. Process the plans into a temporary directory
+2. Start a local server on `:8080` (configurable with `-addr`)
+3. Open your browser to view the results
+4. Clean up on Ctrl+C
+
 ## Caveats
 
 Please note that this might (and will) be unstable and break after some time due to these hideous reasons:

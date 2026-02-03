@@ -658,6 +658,10 @@ func main() {
 		if err := runProcessDriftCmd(os.Args[2:]); err != nil {
 			log.Fatal(err)
 		}
+	case "visualize-drift":
+		if err := runVisualizeDriftCmd(os.Args[2:]); err != nil {
+			log.Fatal(err)
+		}
 	default:
 		printUsage()
 		os.Exit(1)
@@ -670,6 +674,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  serve           Serve UI (frontend and JSONs) on the specified address")
 	fmt.Fprintln(os.Stderr, "  process-plans   Process Atlantis plans and generate JSON files")
 	fmt.Fprintln(os.Stderr, "  process-drift   Process drift detection plans and generate JSON files")
+	fmt.Fprintln(os.Stderr, "  visualize-drift Process drift plans and open browser to view")
 	fmt.Fprintln(os.Stderr, "  version         Print version and exit")
 	fmt.Fprintln(os.Stderr, "\nRun '<command> -help' for more information on a command.")
 }
