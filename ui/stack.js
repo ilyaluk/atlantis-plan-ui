@@ -116,13 +116,7 @@ export default {
                 <span v-if="!isDriftMode" @click="copy(executableName + ' apply -p ' + data.path.replaceAll('/', '_'))" class="btn btn-light btn-sm my-1 ms-1" title="Copy apply comment">
                     <i class="bi-clipboard-check"></i>
                 </span>
-                <a :href="data.logURL" target="_blank" :class="{
-                    'btn': true,
-                    'btn-light': true,
-                    'btn-sm': true,
-                    'm-1': true,
-                    'disabled': !data.logURL,
-                }" role="button" title="Open plan log">
+                <a v-if="data.logURL" :href="data.logURL" target="_blank" class="btn btn-light btn-sm m-1" role="button" title="Open plan log">
                     <i class="bi-card-text"></i>
                 </a>
                 <button :id="btnID" class="accordion-button collapsed" data-bs-toggle="collapse"
