@@ -96,7 +96,7 @@ PATH="$PWD/bin:$PATH" ./bin/atlantis server --config ./atlantis.yaml &
 sleep 1
 ln -sf $PWD/bin/terraform data/atlantis/bin/terraform1.9.5
 
-./bin/atlantis-plan-ui -serve :8080 -output-dir ./data/atlantis/plans-out &
+./bin/atlantis-plan-ui serve -addr :8080 -output-dir ./data/atlantis/plans-out &
 
 (
   cd stacks

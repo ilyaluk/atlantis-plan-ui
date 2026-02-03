@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"path"
@@ -14,8 +13,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-var atlantisConfig = flag.String("atlantis-config", "", "Path to the Atlantis config file")
-
 var atlantisLogger logging.SimpleLogging
 
 type atlantisFlags struct {
@@ -24,14 +21,14 @@ type atlantisFlags struct {
 	ExecutableName string
 }
 
-func getAtlantisFlags() (*atlantisFlags, error) {
+func getAtlantisFlags(atlantisConfig string) (*atlantisFlags, error) {
 	srvCreator := &serverConfigRecorder{}
 
 	// safe to run without change of data-dir because serverConfigRecorder only records the userConfig
 	// it does not construct or start the server.
-	args := []string{"--config", *atlantisConfig}
+	args := []string{"--config", atlantisConfig}
 
-	err := startAtlantis(srvCreator, args)
+	err := startAtlantis(srvCreator, args, atlantisConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -43,16 +40,16 @@ func getAtlantisFlags() (*atlantisFlags, error) {
 	}, nil
 }
 
-func getCommentPoster() (*commentPoster, error) {
+func getCommentPoster(atlantisConfig string) (*commentPoster, error) {
 	srvCreator := &serverCreatorRecorder{}
 
 	// don't reuse data-dir (including db), we only need this to get the vcs client
 	dir := os.TempDir()
 	defer os.RemoveAll(dir)
 
-	args := []string{"--data-dir", dir, "--log-level", "error", "--config", *atlantisConfig}
+	args := []string{"--data-dir", dir, "--log-level", "error", "--config", atlantisConfig}
 
-	err := startAtlantis(srvCreator, args)
+	err := startAtlantis(srvCreator, args, atlantisConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -68,8 +65,8 @@ func (p commentPoster) postComment(repo models.Repo, pullNum int, body string) e
 	return p.client.CreateComment(atlantisLogger, repo, pullNum, body, "post-workflow-hook")
 }
 
-func startAtlantis(creator atlantiscmd.ServerCreator, args []string) error {
-	if *atlantisConfig == "" {
+func startAtlantis(creator atlantiscmd.ServerCreator, args []string, atlantisConfig string) error {
+	if atlantisConfig == "" {
 		return fmt.Errorf("-atlantis-config flag is required")
 	}
 

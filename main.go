@@ -24,50 +24,42 @@ import (
 
 var version = "dev"
 
-var (
-	printVersion = flag.Bool("version", false, "Print version and exit")
+type processPlansConfig struct {
+	atlantisConfig string
+	vcsRepo        string
+	vcsPull        int
+	plansDir       string
+	outputDir      string
+	postComment    bool
+	uiURL          string
+}
 
-	vcsRepo = flag.String("vcs-repo", "", "Repository name in the VCS")
-	vcsPull = flag.Int("vcs-pull", 0, "Pull request number in the VCS")
-
-	plansDir  = flag.String("plans-dir", "", "Directory containing processed source plan files")
-	outputDir = flag.String("output-dir", "", "Output directory for the generated JSON files")
-
-	postComment = flag.Bool("post-comment", true, "Post comment to the VCS with link to the generated UI")
-	uiURL       = flag.String("plan-ui-url", "", "URL of the atlantis-plan-ui server")
-
-	serve = flag.String("serve", "", "Serve UI (frontend and JSONs) on the specified address, disable by default")
-)
-
-func run() error {
-	if *vcsRepo == "" || *vcsPull == 0 {
-		flag.Usage()
+func run(cfg processPlansConfig) error {
+	if cfg.vcsRepo == "" || cfg.vcsPull == 0 {
 		return fmt.Errorf("no -vcs-repo or -vcs-pull specified")
 	}
 
-	if *plansDir == "" || *outputDir == "" {
-		flag.Usage()
+	if cfg.plansDir == "" || cfg.outputDir == "" {
 		return fmt.Errorf("no -plans-dir or -output-dir specified")
 	}
 
-	if *postComment && *uiURL == "" {
-		flag.Usage()
+	if cfg.postComment && cfg.uiURL == "" {
 		return fmt.Errorf("no -plan-ui-url specified, consider using -post-comment=false")
 	}
 
-	if err := os.MkdirAll(*outputDir, 0755); err != nil {
+	if err := os.MkdirAll(cfg.outputDir, 0755); err != nil {
 		return err
 	}
 
-	flags, err := getAtlantisFlags()
+	flags, err := getAtlantisFlags(cfg.atlantisConfig)
 	if err != nil {
 		return fmt.Errorf("failed to get Atlantis flags: %w", err)
 	}
 	log.Printf("got Atlantis flags: %+v", flags)
 
 	var commenter *commentPoster
-	if *postComment {
-		commenter, err = getCommentPoster()
+	if cfg.postComment {
+		commenter, err = getCommentPoster(cfg.atlantisConfig)
 		if err != nil {
 			return fmt.Errorf("failed to get comment poster: %w", err)
 		}
@@ -81,7 +73,7 @@ func run() error {
 	defer db.Close()
 	log.Println("opened Atlantis DB")
 
-	pull, err := getPull(db, *vcsRepo, *vcsPull)
+	pull, err := getPull(db, cfg.vcsRepo, cfg.vcsPull)
 	if errors.Is(err, pullNotFound) {
 		log.Println("pull not found, probably no stacks affected")
 		return nil
@@ -91,24 +83,24 @@ func run() error {
 	}
 	log.Printf("got pull info: %s#%d", pull.Pull.BaseRepo.FullName, pull.Pull.Num)
 
-	data, err := convertPull(db, flags, pull)
+	data, err := convertPull(db, flags, pull, cfg.plansDir, cfg.vcsRepo, cfg.vcsPull)
 	if err != nil {
 		return fmt.Errorf("failed to convert pull to UI: %w", err)
 	}
 	log.Println("converted pull to UI")
 
-	hash, err := writeUIData(data)
+	hash, err := writeUIData(data, cfg.outputDir, fmt.Sprintf("%d", cfg.vcsPull))
 	if err != nil {
 		return fmt.Errorf("failed to write UI data: %w", err)
 	}
 	log.Printf("wrote UI data")
 
-	if !*postComment {
+	if !cfg.postComment {
 		log.Println("skipping comment posting as requested")
 		return nil
 	}
 
-	comment, err := renderComment(data, hash)
+	comment, err := renderComment(data, hash, cfg.uiURL, cfg.vcsPull)
 	if err != nil {
 		return fmt.Errorf("failed to render comment: %w", err)
 	}
@@ -169,7 +161,7 @@ func getPull(db *bbolt.DB, repo string, num int) (models.PullStatus, error) {
 	return pull, err
 }
 
-func convertPull(db *bbolt.DB, flags *atlantisFlags, pull models.PullStatus) (uiData, error) {
+func convertPull(db *bbolt.DB, flags *atlantisFlags, pull models.PullStatus, plansDir, vcsRepo string, vcsPull int) (uiData, error) {
 	res := uiData{
 		ExecutableName: flags.ExecutableName,
 		PRRepo:         pull.Pull.BaseRepo.FullName,
@@ -189,7 +181,7 @@ func convertPull(db *bbolt.DB, flags *atlantisFlags, pull models.PullStatus) (ui
 	}
 
 	for _, prj := range pull.Projects {
-		uiPrj, err := convertStack(pull, prj, locks, logURLs, flags.AtlantisURL)
+		uiPrj, err := convertStack(pull, prj, locks, logURLs, flags.AtlantisURL, plansDir, vcsRepo, vcsPull)
 		if err != nil {
 			return uiData{}, err
 		}
@@ -240,7 +232,7 @@ func buildResourcesIndex(stacks []uiStack) []uiResourceIndex {
 	return res
 }
 
-func convertStack(pull models.PullStatus, prj models.ProjectStatus, locks map[string]*models.ProjectLock, logURLs map[string]string, atlantisURL string) (uiStack, error) {
+func convertStack(pull models.PullStatus, prj models.ProjectStatus, locks map[string]*models.ProjectLock, logURLs map[string]string, atlantisURL, plansDir, vcsRepo string, vcsPull int) (uiStack, error) {
 	uiPrj := uiStack{
 		Name:   prj.ProjectName,
 		Path:   prj.RepoRelDir,
@@ -268,7 +260,7 @@ func convertStack(pull models.PullStatus, prj models.ProjectStatus, locks map[st
 		log.Printf("got unexpected status for project %s: %s, grabbing latest plan anyway", prj.ProjectName, prj.Status)
 	}
 
-	planDir := fmt.Sprintf("%s/%s/%d/%s/", *plansDir, *vcsRepo, *vcsPull, prj.RepoRelDir)
+	planDir := fmt.Sprintf("%s/%s/%d/%s/", plansDir, vcsRepo, vcsPull, prj.RepoRelDir)
 	tfp, err := parseJSONPlan(planDir + "plan.json")
 	if err != nil {
 		return uiStack{}, err
@@ -447,7 +439,7 @@ func formatProjectLogKey(pull models.PullRequest, prj models.ProjectStatus) stri
 	return fmt.Sprintf("%s #%d %s %s", pull.BaseRepo.FullName, pull.Num, prj.RepoRelDir, prj.Workspace)
 }
 
-func writeUIData(res uiData) (string, error) {
+func writeUIData(res uiData, outputDir string, id string) (string, error) {
 	jsonData, err := json.Marshal(res)
 	if err != nil {
 		return "", err
@@ -457,16 +449,16 @@ func writeUIData(res uiData) (string, error) {
 	hasher.Write(jsonData)
 	hash := fmt.Sprintf("%x", hasher.Sum(nil))
 
-	if err := os.WriteFile(fmt.Sprintf("%s/%d.json", *outputDir, *vcsPull), jsonData, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(outputDir, id+".json"), jsonData, 0644); err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(fmt.Sprintf("%s/%d_%s.json", *outputDir, *vcsPull, hash), jsonData, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(outputDir, fmt.Sprintf("%s_%s.json", id, hash)), jsonData, 0644); err != nil {
 		return "", err
 	}
 	return hash, nil
 }
 
-func renderComment(data uiData, hash string) (string, error) {
+func renderComment(data uiData, hash, uiURL string, vcsPull int) (string, error) {
 	t := template.Must(template.New("comment").Parse(`
 ## [↗️ Plans viewer]({{ .URL }})
 
@@ -520,7 +512,7 @@ func renderComment(data uiData, hash string) (string, error) {
 		StacksWithImports       int
 		StacksWithForgets       int
 	}{
-		URL:         fmt.Sprint(*uiURL, "#", *vcsPull, "_", hash),
+		URL:         fmt.Sprintf("%s#%d_%s", uiURL, vcsPull, hash),
 		TotalStacks: len(data.Stacks),
 	}
 
@@ -640,20 +632,63 @@ type uiResourceIndex struct {
 }
 
 func main() {
-	flag.Parse()
+	if len(os.Args) < 2 {
+		printUsage()
+		os.Exit(1)
+	}
 
-	if *printVersion {
+	switch os.Args[1] {
+	case "version", "-version", "--version":
 		fmt.Println("atlantis-plan-ui", version)
-		return
-	}
-
-	if *serve != "" {
-		if err := runServe(*serve); err != nil {
-			panic(err)
+	case "serve":
+		if err := runServeCmd(os.Args[2:]); err != nil {
+			log.Fatal(err)
 		}
+	case "process-plans":
+		if err := runProcessPlansCmd(os.Args[2:]); err != nil {
+			log.Fatal(err)
+		}
+	case "process-drift":
+		if err := runProcessDriftCmd(os.Args[2:]); err != nil {
+			log.Fatal(err)
+		}
+	default:
+		printUsage()
+		os.Exit(1)
+	}
+}
+
+func printUsage() {
+	fmt.Fprintf(os.Stderr, "Usage: %s <command> [options]\n\n", os.Args[0])
+	fmt.Fprintln(os.Stderr, "Commands:")
+	fmt.Fprintln(os.Stderr, "  serve           Serve UI (frontend and JSONs) on the specified address")
+	fmt.Fprintln(os.Stderr, "  process-plans   Process Atlantis plans and generate JSON files")
+	fmt.Fprintln(os.Stderr, "  process-drift   Process drift detection plans and generate JSON files")
+	fmt.Fprintln(os.Stderr, "  version         Print version and exit")
+	fmt.Fprintln(os.Stderr, "\nRun '<command> -help' for more information on a command.")
+}
+
+func runProcessPlansCmd(args []string) error {
+	fs := flag.NewFlagSet("process-plans", flag.ExitOnError)
+	atlantisConfig := fs.String("atlantis-config", "", "Path to the Atlantis config file")
+	vcsRepo := fs.String("vcs-repo", "", "Repository name in the VCS")
+	vcsPull := fs.Int("vcs-pull", 0, "Pull request number in the VCS")
+	plansDir := fs.String("plans-dir", "", "Directory containing processed source plan files")
+	outputDir := fs.String("output-dir", "", "Output directory for the generated JSON files")
+	postComment := fs.Bool("post-comment", true, "Post comment to the VCS with link to the generated UI")
+	uiURL := fs.String("plan-ui-url", "", "URL of the atlantis-plan-ui server")
+
+	if err := fs.Parse(args); err != nil {
+		return err
 	}
 
-	if err := run(); err != nil {
-		panic(err)
-	}
+	return run(processPlansConfig{
+		atlantisConfig: *atlantisConfig,
+		vcsRepo:        *vcsRepo,
+		vcsPull:        *vcsPull,
+		plansDir:       *plansDir,
+		outputDir:      *outputDir,
+		postComment:    *postComment,
+		uiURL:          *uiURL,
+	})
 }

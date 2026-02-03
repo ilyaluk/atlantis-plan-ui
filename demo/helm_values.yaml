@@ -6,7 +6,7 @@ repoConfig: |
       workflow: default
       post_workflow_hooks:
         - run: |
-            atlantis-plan-ui \
+            atlantis-plan-ui process-plans \
               -atlantis-config /etc/atlantis/atlantis.yaml \
               -plan-ui-url $ATLANTIS_ATLANTIS_URL/plan-ui/ \
               -plans-dir $ATLANTIS_DATA_DIR/plans \
@@ -68,7 +68,8 @@ extraContainers:
         mountPath: /plugins
     command:
       - /plugins/atlantis-plan-ui
-      - -serve=:8080
+      - serve
+      - -addr=:8080
       - -serve-path=/plan-ui/
       - -output-dir=/atlantis-data/plans-out
 

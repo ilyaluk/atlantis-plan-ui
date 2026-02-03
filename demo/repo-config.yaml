@@ -8,7 +8,7 @@ repos:
     post_workflow_hooks:
       - run: |
           cd $ATLANTIS_DATA_DIR/../../
-          ./bin/atlantis-plan-ui \
+          ./bin/atlantis-plan-ui process-plans \
             -atlantis-config ./atlantis.yaml \
             -plan-ui-url http://localhost:8080/ \
             -plans-dir $ATLANTIS_DATA_DIR/plans \

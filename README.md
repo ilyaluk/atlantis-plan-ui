@@ -25,7 +25,7 @@ repos:
     # ...
     post_workflow_hooks:
       - run: |
-          atlantis-plan-ui \
+          atlantis-plan-ui process-plans \
             -atlantis-config /etc/atlantis/atlantis.yaml \
             # ↓ replace with atlantis-plan-ui external URL, remove this comment
             -plan-ui-url http://localhost:8080/ \
@@ -70,7 +70,7 @@ This assumes that data dir is set by `$ATLANTIS_DATA_DIR`, and not from config/f
 Then, start `atlantis-plan-ui` server like that:
 
 ```bash
-atlantis-plan-ui -serve :8080 -output-dir $ATLANTIS_DATA_DIR/plans-out
+atlantis-plan-ui serve -addr :8080 -output-dir $ATLANTIS_DATA_DIR/plans-out
 ```
 
 You can run it as a sidecar with shared volume in k8s, or separate docker container with shared volume.
@@ -115,7 +115,7 @@ To test UI without recompling:
 cd demo
 ./demo.sh
 # Wait for PR, open other shell
-go run . -dev-ui -serve :8081 -output-dir demo/data/atlantis/plans-out
+go run . serve -dev-ui -addr :8081 -output-dir demo/data/atlantis/plans-out
 # Open http://localhost:8081/#2 in browser
 # Reload on changes in ui/* files, they will be served
 ```
