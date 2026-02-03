@@ -54,8 +54,8 @@ func runServe(addr, outputDir string, devUIServe bool, servePath string) error {
 	return http.ListenAndServe(addr, http.StripPrefix(servePath, mux))
 }
 
-func runVisualizeDriftCmd(args []string) error {
-	fs := flag.NewFlagSet("visualize-drift", flag.ExitOnError)
+func runVisualizeDriftsCmd(args []string) error {
+	fs := flag.NewFlagSet("visualize-drifts", flag.ExitOnError)
 	plansDir := fs.String("plans-dir", "", "Directory containing plan files (required)")
 	addr := fs.String("addr", ":8080", "Address to serve on")
 

@@ -654,12 +654,12 @@ func main() {
 		if err := runProcessPlansCmd(os.Args[2:]); err != nil {
 			log.Fatal(err)
 		}
-	case "process-drift":
-		if err := runProcessDriftCmd(os.Args[2:]); err != nil {
+	case "process-drifts":
+		if err := runProcessDriftsCmd(os.Args[2:]); err != nil {
 			log.Fatal(err)
 		}
-	case "visualize-drift":
-		if err := runVisualizeDriftCmd(os.Args[2:]); err != nil {
+	case "visualize-drifts":
+		if err := runVisualizeDriftsCmd(os.Args[2:]); err != nil {
 			log.Fatal(err)
 		}
 	default:
@@ -673,8 +673,8 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "Commands:")
 	fmt.Fprintln(os.Stderr, "  serve           Serve UI (frontend and JSONs) on the specified address")
 	fmt.Fprintln(os.Stderr, "  process-plans   Process Atlantis plans and generate JSON files")
-	fmt.Fprintln(os.Stderr, "  process-drift   Process drift detection plans and generate JSON files")
-	fmt.Fprintln(os.Stderr, "  visualize-drift Process drift plans and open browser to view")
+	fmt.Fprintln(os.Stderr, "  process-drifts  Process drift detection plans and generate JSON files")
+	fmt.Fprintln(os.Stderr, "  visualize-drifts Process drift plans and open browser to view")
 	fmt.Fprintln(os.Stderr, "  version         Print version and exit")
 	fmt.Fprintln(os.Stderr, "\nRun '<command> -help' for more information on a command.")
 }
@@ -704,8 +704,8 @@ func runProcessPlansCmd(args []string) error {
 	})
 }
 
-func runProcessDriftCmd(args []string) error {
-	fs := flag.NewFlagSet("process-drift", flag.ExitOnError)
+func runProcessDriftsCmd(args []string) error {
+	fs := flag.NewFlagSet("process-drifts", flag.ExitOnError)
 	plansDir := fs.String("plans-dir", "", "Directory containing plan files")
 	outputDir := fs.String("output-dir", "", "Output directory for JSON files")
 	driftID := fs.String("drift-id", "", "Drift runner identifier (required)")

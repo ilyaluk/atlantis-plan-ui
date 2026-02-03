@@ -85,10 +85,10 @@ In addition to visualizing PR plans, atlantis-plan-ui can visualize drift detect
 
 ### Processing Drift Plans
 
-Use `process-drift` to process plan files from a directory and generate JSON files for the UI:
+Use `process-drifts` to process plan files from a directory and generate JSON files for the UI:
 
 ```bash
-atlantis-plan-ui process-drift \
+atlantis-plan-ui process-drifts \
   -plans-dir /path/to/plans \
   -output-dir /path/to/output \
   -drift-id my-drift-run
