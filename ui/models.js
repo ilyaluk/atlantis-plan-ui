@@ -154,8 +154,8 @@ class ResourceIndex {
     constructor(raw) {
         this.address = raw["address"]
         this.stacks = (raw["stacks"] || [])
-            .map((s) => sanitize(s))
-            .sort((l, r) => l.localeCompare(r))
+            .map((s) => ({ path: s, pathSanitized: sanitize(s) }))
+            .sort((l, r) => l.path.localeCompare(r.path))
     }
 
     get addressSanitized() {

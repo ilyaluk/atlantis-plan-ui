@@ -53,7 +53,7 @@
     </div>
 
     <div class="accordion">
-        <Resources ref="resourcesIndex" :resources-index="pull.resourcesIndex"></Resources>
+        <Resources ref="resourcesIndex" :resources-index="pull.resourcesIndex" @navigate="navigateToResource"></Resources>
     </div>
 
     <div class="accordion" v-for="item in sortedStacks" >
@@ -157,6 +157,42 @@
             },
             toggleType(name) {
                 this.show[name] = !this.show[name]
+            },
+            navigateToResource({ stackPath, resourceAddress }) {
+                const stackComponent = this.$refs.stacks.find(
+                    (st) => st.data.pathSanitized === stackPath
+                )
+                if (!stackComponent) return
+
+                stackComponent.expand()
+
+                const sanitize = (val) => val.replaceAll(/[^a-zA-Z0-9-_]/g, "-")
+                const resourceId = `${stackPath}__resource_${sanitize(resourceAddress)}`
+
+                Vue.nextTick(() => {
+                    var resourceEl = document.getElementById(resourceId)
+                    if (!resourceEl) {
+
+                        const matchingElements = Array.from(document.querySelectorAll(`[id^="${resourceId}"]`))
+                            .sort((a, b) => a.id.localeCompare(b.id))
+                        if (matchingElements.length === 0) {
+                            console.warn(`Resource element not found for ${resourceId}`)
+                            return
+                        }
+
+                        console.warn(`Multiple resource elements found for ${resourceId}, using the first one`)
+                        resourceEl = matchingElements[0]
+                    }
+
+                    // Expand the resource accordion
+                    const resourceBtn = resourceEl.previousElementSibling?.querySelector('.accordion-button')
+                    if (resourceBtn) {
+                        resourceBtn.classList.remove('collapsed')
+                    }
+                    resourceEl.classList.add('show')
+
+                    resourceEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                })
             },
         },
         computed: {
