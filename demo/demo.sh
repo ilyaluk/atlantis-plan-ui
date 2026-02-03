@@ -24,7 +24,12 @@ trap cleanup EXIT
   [ ! -f ./minio ] && curl -LO "https://dl.min.io/server/minio/release/${GOOS}-${GOARCH}/minio"
   chmod +x ./minio
 
-  [ ! -f ./gitea ] && curl -Lo gitea "https://dl.gitea.com/gitea/1.22.1/gitea-1.22.1-${GOOS}-10.12-${GOARCH}"
+  local GITEA_GOOS="${GOOS}"
+  if [[ "${GOOS}" == "darwin" ]]; then
+    GITEA_GOOS="darwin-10.12"
+  fi
+
+  [ ! -f ./gitea ] && curl -Lo gitea "https://dl.gitea.com/gitea/1.22.1/gitea-1.22.1-${GITEA_GOOS}-${GOARCH}"
   chmod +x ./gitea
 
   if [ ! -f ./atlantis ]; then
@@ -48,9 +53,10 @@ rm -rf ./stacks/*/.terraform* || true
 ./bin/minio server ./data/minio &
 
 mkdir -p ./data/gitea/{custom,data,log}
+sed -i'' "s,^WORK_PATH = .*,WORK_PATH = $PWD/data/gitea/," gitea.ini
 GITEA_WORK_DIR=$PWD/data/gitea/ ./bin/gitea -c gitea.ini web &
 
-sleep 3
+sleep 5
 ./bin/gitea -c gitea.ini admin user create \
   --username atlantis --password atlantis --email atlantis@example.com --admin
 
@@ -85,14 +91,17 @@ curl --json '{
 export ATLANTIS_DATA_DIR=$PWD/data/atlantis
 export ATLANTIS_GITEA_TOKEN=$TOKEN
 export ATLANTIS_GITEA_WEBHOOK_SECRET=foobar
-./bin/atlantis server --config ./atlantis.yaml &
+PATH="$PWD/bin:$PATH" ./bin/atlantis server --config ./atlantis.yaml &
+
+sleep 1
+ln -sf $PWD/bin/terraform data/atlantis/bin/terraform1.9.5
 
 ./bin/atlantis-plan-ui -serve :8080 -output-dir ./data/atlantis/plans-out &
 
 (
   cd stacks
   ./gen_states.sh
-  for folder in $(find . -type d -depth 1); do
+  for folder in $(find . -mindepth 1 -maxdepth 1 -type d); do
     # TODO: parallel
     ../bin/terraform -chdir="$folder" init
     ../bin/terraform -chdir="$folder" apply -auto-approve
