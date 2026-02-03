@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-for folder in $(find . -type d -depth 1); do
+for folder in $(find . -mindepth 1 -maxdepth 1 -type d); do
   folder_name=$(basename "$folder")
   cat > "$folder/providers.tf" <<EOF
 terraform {
