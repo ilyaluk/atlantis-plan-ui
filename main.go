@@ -600,6 +600,7 @@ type uiStack struct {
 
 	PlanError bool   `json:"plan_error"`
 	LogURL    string `json:"log_url"`
+	ErrorLog  string `json:"error_log,omitempty"`
 
 	LockURL      string `json:"lock_url,omitempty"`
 	LockPRURL    string `json:"lock_pr_url,omitempty"`
@@ -738,10 +739,10 @@ func runDrift(plansDir, outputDir, driftID string) error {
 
 	// Convert each stack
 	var uiStacks []uiStack
-	for _, stackPath := range stacks {
-		uiStack, err := convertDriftStack(plansDir, stackPath)
+	for _, stackInfo := range stacks {
+		uiStack, err := convertDriftStack(plansDir, stackInfo)
 		if err != nil {
-			return fmt.Errorf("failed to convert stack %s: %w", stackPath, err)
+			return fmt.Errorf("failed to convert stack %s: %w", stackInfo.path, err)
 		}
 		uiStacks = append(uiStacks, uiStack)
 	}
@@ -762,24 +763,63 @@ func runDrift(plansDir, outputDir, driftID string) error {
 	return nil
 }
 
-func discoverDriftStacks(plansDir string) ([]string, error) {
-	var stacks []string
+type driftStackInfo struct {
+	path     string
+	hasError bool
+}
+
+func discoverDriftStacks(plansDir string) ([]driftStackInfo, error) {
+	// Track discovered directories to avoid duplicates
+	discovered := make(map[string]driftStackInfo)
+
 	err := filepath.WalkDir(plansDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if d.Name() == "plan.json" && !d.IsDir() {
-			// Get relative directory path
-			relDir, _ := filepath.Rel(plansDir, filepath.Dir(path))
-			stacks = append(stacks, relDir)
+		if d.IsDir() {
+			return nil
+		}
+
+		relDir, _ := filepath.Rel(plansDir, filepath.Dir(path))
+
+		switch d.Name() {
+		case "plan.json":
+			// Only add if not already discovered with an error
+			if _, exists := discovered[relDir]; !exists {
+				discovered[relDir] = driftStackInfo{path: relDir, hasError: false}
+			}
+		case "plan.err":
+			discovered[relDir] = driftStackInfo{path: relDir, hasError: true}
 		}
 		return nil
 	})
-	return stacks, err
+	if err != nil {
+		return nil, err
+	}
+
+	var stacks []driftStackInfo
+	for _, info := range discovered {
+		stacks = append(stacks, info)
+	}
+	return stacks, nil
 }
 
-func convertDriftStack(plansDir, stackPath string) (uiStack, error) {
-	planDir := filepath.Join(plansDir, stackPath)
+func convertDriftStack(plansDir string, stackInfo driftStackInfo) (uiStack, error) {
+	planDir := filepath.Join(plansDir, stackInfo.path)
+
+	if stackInfo.hasError {
+		errContent, err := os.ReadFile(filepath.Join(planDir, "plan.err"))
+		if err != nil {
+			return uiStack{}, fmt.Errorf("failed to read plan.err: %w", err)
+		}
+
+		return uiStack{
+			Name:      stackInfo.path,
+			Path:      stackInfo.path,
+			PlanError: true,
+			ErrorLog:  string(errContent),
+		}, nil
+	}
 
 	tfp, err := parseJSONPlan(filepath.Join(planDir, "plan.json"))
 	if err != nil {
@@ -792,8 +832,8 @@ func convertDriftStack(plansDir, stackPath string) (uiStack, error) {
 	}
 
 	return uiStack{
-		Name:           stackPath,
-		Path:           stackPath,
+		Name:           stackInfo.path,
+		Path:           stackInfo.path,
 		uiProjectDiffs: convertStackPlan(tfp, txts),
 	}, nil
 }

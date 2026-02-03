@@ -1,6 +1,7 @@
 import Diff from "./diff.js";
 import Counter from "./counter.js";
 import { Stack } from "./models.js"
+import { AnsiUp } from "./lib/ansi_up.js"
 
 export default {
     components: {Diff, Counter},
@@ -45,6 +46,11 @@ export default {
                 if (this.show.refactors) { return true }
                 return d.actions.join(",") !== "forget" // hide forgets if we hide refactors
             })
+        },
+        errorLogHtml() {
+            if (!this.data.errorLog) return ''
+            const ansi_up = new AnsiUp()
+            return ansi_up.ansi_to_html(this.data.errorLog)
         }
     },
     methods: {
@@ -160,9 +166,16 @@ export default {
                         Check with PR author ({{ data.lockPRAuthor }}) whether it's okay to <a :href="data.lockURL">unlock</a> the stack, then re-plan.
                     </span>
                     <span v-else-if="data.planError">
-                        This plan errored.
-                        <template v-if="data.logURL">See <a :href="data.logURL" target="_blank">plan log</a>.</template>
-                        <template v-else>Plan log is unavailable, check PR comments or Atlantis logs.</template>
+                        <template v-if="data.errorLog">
+                            <div class="mb-2">This plan errored. Error log:</div>
+                            <pre class="error-log" v-html="errorLogHtml"></pre>
+                        </template>
+                        <template v-else-if="data.logURL">
+                            This plan errored. See <a :href="data.logURL" target="_blank">plan log</a>.
+                        </template>
+                        <template v-else>
+                            This plan errored. Plan log is unavailable, check PR comments or Atlantis logs.
+                        </template>
                     </span>
                     <template v-else-if="data.resourceDiffs.length || data.outputDiffs.length || data.driftDiffs.length || data.moves.length">
                         <span v-if="!data.resourceDiffs.length">

@@ -60,3 +60,14 @@
 .color-yellow {
     color: var(--bs-yellow);
 }
+.error-log {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1rem;
+    border-radius: 0.25rem;
+    max-height: 500px;
+    overflow: auto;
+    font-family: monospace;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}

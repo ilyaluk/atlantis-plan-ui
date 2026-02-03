@@ -96,6 +96,10 @@ atlantis-plan-ui process-drifts \
 
 The `-plans-dir` should contain subdirectories with `plan.json` and `plan.txt` files (the same format as Atlantis plans). The directory structure determines stack names in the UI.
 
+#### Error File Support
+
+For stacks that fail during drift detection, you can provide a `plan.err` file instead of plan files. When this file is present, the stack will be displayed with an error indicator and the error log will be shown with ANSI colors preserved.
+
 ### Local Visualization
 
 For quick local visualization of drift plans, use `visualize-drifts` which combines processing and serving in one command:

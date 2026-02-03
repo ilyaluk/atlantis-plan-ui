@@ -67,6 +67,7 @@ class Stack {
         this.path = raw["path"] || ""
         this.logURL = raw["log_url"] || ""
         this.planError = raw["plan_error"] || false
+        this.errorLog = raw["error_log"] || ""
 
         this.locked = false
         if (raw["lock_url"]) {
