@@ -7,12 +7,13 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"golang.org/x/net/html"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -20,6 +21,7 @@ import (
 
 	"github.com/runatlantis/atlantis/server/events/models"
 	"go.etcd.io/bbolt"
+	"golang.org/x/net/html"
 )
 
 var version = "dev"
@@ -584,6 +586,10 @@ type uiData struct {
 	PRNum  int    `json:"pr_num"`
 	PRURL  string `json:"pr_url"`
 
+	// Drift mode fields
+	IsDriftMode   bool   `json:"is_drift_mode,omitempty"`
+	DriftRunnerID string `json:"drift_runner_id,omitempty"`
+
 	Stacks         []uiStack         `json:"stacks"`
 	ResourcesIndex []uiResourceIndex `json:"resources_index"`
 }
@@ -691,4 +697,98 @@ func runProcessPlansCmd(args []string) error {
 		postComment:    *postComment,
 		uiURL:          *uiURL,
 	})
+}
+
+func runProcessDriftCmd(args []string) error {
+	fs := flag.NewFlagSet("process-drift", flag.ExitOnError)
+	plansDir := fs.String("plans-dir", "", "Directory containing plan files")
+	outputDir := fs.String("output-dir", "", "Output directory for JSON files")
+	driftID := fs.String("drift-id", "", "Drift runner identifier (required)")
+
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	return runDrift(*plansDir, *outputDir, *driftID)
+}
+
+func runDrift(plansDir, outputDir, driftID string) error {
+	if plansDir == "" || outputDir == "" {
+		return fmt.Errorf("no -plans-dir or -output-dir specified")
+	}
+	if driftID == "" {
+		return fmt.Errorf("no -drift-id specified")
+	}
+
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return err
+	}
+
+	// Recursively find all directories with plan.json
+	stacks, err := discoverDriftStacks(plansDir)
+	if err != nil {
+		return fmt.Errorf("failed to discover stacks: %w", err)
+	}
+	log.Printf("found %d stacks", len(stacks))
+
+	// Convert each stack
+	var uiStacks []uiStack
+	for _, stackPath := range stacks {
+		uiStack, err := convertDriftStack(plansDir, stackPath)
+		if err != nil {
+			return fmt.Errorf("failed to convert stack %s: %w", stackPath, err)
+		}
+		uiStacks = append(uiStacks, uiStack)
+	}
+
+	data := uiData{
+		IsDriftMode:    true,
+		DriftRunnerID:  driftID,
+		Stacks:         uiStacks,
+		ResourcesIndex: buildResourcesIndex(uiStacks),
+	}
+
+	_, err = writeUIData(data, outputDir, driftID)
+	if err != nil {
+		return fmt.Errorf("failed to write UI data: %w", err)
+	}
+	log.Printf("wrote UI data")
+
+	return nil
+}
+
+func discoverDriftStacks(plansDir string) ([]string, error) {
+	var stacks []string
+	err := filepath.WalkDir(plansDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.Name() == "plan.json" && !d.IsDir() {
+			// Get relative directory path
+			relDir, _ := filepath.Rel(plansDir, filepath.Dir(path))
+			stacks = append(stacks, relDir)
+		}
+		return nil
+	})
+	return stacks, err
+}
+
+func convertDriftStack(plansDir, stackPath string) (uiStack, error) {
+	planDir := filepath.Join(plansDir, stackPath)
+
+	tfp, err := parseJSONPlan(filepath.Join(planDir, "plan.json"))
+	if err != nil {
+		return uiStack{}, err
+	}
+
+	txts, err := parseTextPlan(filepath.Join(planDir, "plan.txt"))
+	if err != nil {
+		return uiStack{}, err
+	}
+
+	return uiStack{
+		Name:           stackPath,
+		Path:           stackPath,
+		uiProjectDiffs: convertStackPlan(tfp, txts),
+	}, nil
 }

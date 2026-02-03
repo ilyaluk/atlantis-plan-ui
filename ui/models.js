@@ -5,6 +5,10 @@ class Pull {
         this.prRepo = raw["pr_repo"]
         this.prURL = raw["pr_url"]
 
+        // Drift mode
+        this.isDriftMode = raw["is_drift_mode"] || false
+        this.driftRunnerID = raw["drift_runner_id"] || ""
+
         this.stacks = []
         for (const stackRaw of (raw["stacks"] || [])) {
             this.stacks.push(new Stack(stackRaw))

@@ -18,6 +18,10 @@ export default {
             },
         },
         executableName: String,
+        isDriftMode: {
+            type: Boolean,
+            default: false,
+        },
     },
     data() {
         return {
@@ -103,7 +107,7 @@ export default {
                 <span @click="copy(data.path)" class="btn btn-light btn-sm my-1 ms-1" title="Copy path">
                     <i class="bi-clipboard"></i>
                 </span>
-                <span @click="copy(executableName + ' apply -p ' + data.path.replaceAll('/', '_'))" class="btn btn-light btn-sm my-1 ms-1" title="Copy apply comment">
+                <span v-if="!isDriftMode" @click="copy(executableName + ' apply -p ' + data.path.replaceAll('/', '_'))" class="btn btn-light btn-sm my-1 ms-1" title="Copy apply comment">
                     <i class="bi-clipboard-check"></i>
                 </span>
                 <a :href="data.logURL" target="_blank" :class="{
