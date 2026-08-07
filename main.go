@@ -245,8 +245,18 @@ func convertStack(pull models.PullStatus, prj models.ProjectStatus, locks map[st
 	if prj.Status == models.ErroredPlanStatus {
 		uiPrj.PlanError = true
 
-		lockID := fmt.Sprintf("%s/%s/%s", pull.Pull.BaseRepo.FullName, prj.RepoRelDir, prj.Workspace)
-		if lock := locks[lockID]; lock != nil {
+		lockID := models.GenerateLockKey(
+			models.NewProject(pull.Pull.BaseRepo.FullName, prj.RepoRelDir, prj.ProjectName),
+			prj.Workspace,
+		)
+		lock := locks[lockID]
+		if lock == nil {
+			// Atlantis before v0.40.0, which added the project name to the lock key.
+			// See https://github.com/runatlantis/atlantis/pull/6004.
+			lockID = fmt.Sprintf("%s/%s/%s", pull.Pull.BaseRepo.FullName, prj.RepoRelDir, prj.Workspace)
+			lock = locks[lockID]
+		}
+		if lock != nil {
 			// this check should be redundant, but just in case
 			if lock.Pull.BaseRepo.FullName != pull.Pull.BaseRepo.FullName || lock.Pull.Num != pull.Pull.Num {
 				uiPrj.LockURL = atlantisURL + "/lock?id=" + url.QueryEscape(lockID)
