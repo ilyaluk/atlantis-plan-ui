@@ -122,7 +122,7 @@ Please note that this might (and will) be unstable and break after some time due
 3. Constructing most of atlantis server (potentially with side effects) just to construct generic comment poster
 4. Parsing Terraform text output manually (because all of its packages are internal, and it's the simplest way to get familiar diff output)
 
-As of now, this relies heavily on Atlantis internals, it might break after any Atlantis update. This is tested with atlantis 0.29.0.
+As of now, this relies heavily on Atlantis internals, it might break after any Atlantis update. This is tested with atlantis 0.40.0.
 
 This is tested only in single-repo setup, additional adjustments might be needed for multi-repo setup.
 
