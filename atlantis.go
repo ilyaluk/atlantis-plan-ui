@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path"
 
@@ -44,13 +45,15 @@ func getCommentPoster(atlantisConfig string) (*commentPoster, error) {
 	srvCreator := &serverCreatorRecorder{}
 
 	// don't reuse data-dir (including db), we only need this to get the vcs client
-	dir := os.TempDir()
+	dir, err := os.MkdirTemp("", "atlantis-plan-ui")
+	if err != nil {
+		return nil, err
+	}
 	defer os.RemoveAll(dir)
 
 	args := []string{"--data-dir", dir, "--log-level", "error", "--config", atlantisConfig}
 
-	err := startAtlantis(srvCreator, args, atlantisConfig)
-	if err != nil {
+	if err := startAtlantis(srvCreator, args, atlantisConfig); err != nil {
 		return nil, err
 	}
 
@@ -70,6 +73,11 @@ func startAtlantis(creator atlantiscmd.ServerCreator, args []string, atlantisCon
 		return fmt.Errorf("-atlantis-config flag is required")
 	}
 
+	// server.NewServer calls logging.SuppressDefaultLogging, which points the
+	// standard logger at io.Discard. That would silence all of our own output,
+	// including log.Fatal. Restore the current writer when we are done.
+	defer log.SetOutput(log.Writer())
+
 	atlantisLogger, _ = logging.NewStructuredLogger()
 	atlantisLogger.SetLevel(logging.Error)
 
@@ -78,6 +86,9 @@ func startAtlantis(creator atlantiscmd.ServerCreator, args []string, atlantisCon
 		Viper:         viper.New(),
 		SilenceOutput: true,
 		Logger:        atlantisLogger,
+		// Atlantis v0.40+ marks Server.*Controller.AtlantisVersion as required,
+		// so an empty version fails struct validation inside server.NewServer.
+		AtlantisVersion: version,
 	}
 	cmd := c.Init()
 	cmd.SetArgs(args)
