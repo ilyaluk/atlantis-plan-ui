@@ -18,8 +18,10 @@
         </div>
         Loading…
     </h1>
-    <h5 class="mt-3" v-if="pull.prNum > 0">Showing plans from <a :href="pull.prURL">{{ pull.prRepo }}#{{ pull.prNum }}</a></h5>
-    <h5 class="mt-3" v-else-if="pull.isDriftMode">Drift detection: <strong>{{ pull.driftRunnerID }}</strong></h5>
+    <h5 class="mt-3" v-if="pull.prNum > 0">Showing plans from <a :href="pull.prURL">{{ pull.prRepo }}#{{ pull.prNum }}</a>
+        <a v-if="jsonURL" :href="jsonURL" class="ms-2 fs-6 text-muted" title="Raw plan data used by this page">JSON</a></h5>
+    <h5 class="mt-3" v-else-if="pull.isDriftMode">Drift detection: <strong>{{ pull.driftRunnerID }}</strong>
+        <a v-if="jsonURL" :href="jsonURL" class="ms-2 fs-6 text-muted" title="Raw plan data used by this page">JSON</a></h5>
     <div class="mt-3">
         <Stats :pull="pull"></Stats>
     </div>
@@ -79,6 +81,7 @@
             return {
                 loading: true,
                 pull: new Pull({}),
+                jsonURL: '',
                 expandedStacks: false,
                 expandedResources: false,
                 show: {
@@ -99,7 +102,8 @@
                 alert('invalid state')
                 return
             }
-            fetch(`./plans/${path}.json`)
+            this.jsonURL = `./plans/${path}.json`
+            fetch(this.jsonURL)
                 .then(resp => resp.json())
                 .then(async data => {
                     console.log(data)
