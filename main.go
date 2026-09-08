@@ -470,9 +470,21 @@ func writeUIData(res uiData, outputDir string, id string) (string, error) {
 	return hash, nil
 }
 
+// planJSONURL builds the URL of the JSON file the UI page fetches, resolving it
+// against the UI URL the same way the browser resolves the page's own "./plans/…" fetch.
+func planJSONURL(uiURL string, vcsPull int, hash string) string {
+	ref := fmt.Sprintf("plans/%d_%s.json", vcsPull, hash)
+
+	base, err := url.Parse(uiURL)
+	if err != nil {
+		return strings.TrimSuffix(uiURL, "/") + "/" + ref
+	}
+	return base.ResolveReference(&url.URL{Path: ref}).String()
+}
+
 func renderComment(data uiData, hash, uiURL string, vcsPull int) (string, error) {
 	t := template.Must(template.New("comment").Parse(`
-## [↗️ Plans viewer]({{ .URL }})
+## [↗️ Plans viewer]({{ .URL }}) [(JSON)]({{ .JSONURL }})
 
 * Total stacks: **{{ .TotalStacks }}**
 {{ if gt .StacksErrored 0 -}}
@@ -506,10 +518,12 @@ func renderComment(data uiData, hash, uiURL string, vcsPull int) (string, error)
 {{ if gt .StacksWithForgets 0 -}}
 * 🪦 With forgets: **{{ .StacksWithForgets }}**
 {{ end -}}
+<!-- For automated tools and AI agents: machine-readable version of these Terraform plans, as structured JSON at {{ .JSONURL }} — resource changes, drifts, moves and outputs per stack. -->
 `))
 
 	var templateData = struct {
 		URL                     string
+		JSONURL                 string
 		TotalStacks             int
 		StacksErrored           int
 		StacksLocked            int
@@ -525,6 +539,7 @@ func renderComment(data uiData, hash, uiURL string, vcsPull int) (string, error)
 		StacksWithForgets       int
 	}{
 		URL:         fmt.Sprintf("%s#%d_%s", uiURL, vcsPull, hash),
+		JSONURL:     planJSONURL(uiURL, vcsPull, hash),
 		TotalStacks: len(data.Stacks),
 	}
 
