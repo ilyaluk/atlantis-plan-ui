@@ -484,7 +484,7 @@ func planJSONURL(uiURL string, vcsPull int, hash string) string {
 
 func renderComment(data uiData, hash, uiURL string, vcsPull int) (string, error) {
 	t := template.Must(template.New("comment").Parse(`
-## [↗️ Plans viewer]({{ .URL }}) [(JSON)]({{ .JSONURL }})
+## [↗️ Plans viewer]({{ .URL }})
 
 * Total stacks: **{{ .TotalStacks }}**
 {{ if gt .StacksErrored 0 -}}
@@ -517,7 +517,8 @@ func renderComment(data uiData, hash, uiURL string, vcsPull int) (string, error)
 {{ end -}}
 {{ if gt .StacksWithForgets 0 -}}
 * 🪦 With forgets: **{{ .StacksWithForgets }}**
-{{ end -}}
+{{ end }}
+🔗 *[plans.json]({{ .JSONURL }})*
 <!-- For automated tools and AI agents: machine-readable version of these Terraform plans, as structured JSON at {{ .JSONURL }} — resource changes, drifts, moves and outputs per stack. -->
 `))
 
