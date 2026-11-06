@@ -56,7 +56,7 @@
     </div>
 
     <div class="accordion">
-        <Resources ref="resourcesIndex" :resources-index="pull.resourcesIndex" @navigate="navigateToResource"></Resources>
+        <Resources ref="resourcesIndex" :stacks="pull.stacks" @navigate="navigateToResource"></Resources>
     </div>
 
     <div class="accordion" v-for="item in sortedStacks" >
@@ -163,7 +163,7 @@
             toggleType(name) {
                 this.show[name] = !this.show[name]
             },
-            navigateToResource({ stackPath, resourceAddress }) {
+            navigateToResource({ stackPath, resourceAddress, kind }) {
                 const stackComponent = this.$refs.stacks.find(
                     (st) => st.data.pathSanitized === stackPath
                 )
@@ -171,8 +171,15 @@
 
                 stackComponent.expand()
 
+                if (kind === 'move') {
+                    Vue.nextTick(() => {
+                        document.getElementById(stackPath)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    })
+                    return
+                }
+
                 const sanitize = (val) => val.replaceAll(/[^a-zA-Z0-9-_]/g, "-")
-                const resourceId = `${stackPath}__resource_${sanitize(resourceAddress)}`
+                const resourceId = `${stackPath}__${kind === 'drift' ? 'drift' : 'resource'}_${sanitize(resourceAddress)}`
 
                 Vue.nextTick(() => {
                     var resourceEl = document.getElementById(resourceId)

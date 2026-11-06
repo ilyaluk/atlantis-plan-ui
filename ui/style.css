@@ -71,3 +71,45 @@
     white-space: pre-wrap;
     word-wrap: break-word;
 }
+.index-counters {
+    display: inline-flex;
+    flex-shrink: 0;
+    min-width: 5rem;
+}
+.index-filter {
+    width: 18rem;
+}
+.key-mask, .key-split, .key-single {
+    cursor: pointer;
+    border-radius: 0.2rem;
+}
+.key-mask {
+    background-color: var(--bs-gray-200);
+    color: var(--bs-indigo);
+    padding: 0 0.15rem;
+    font-weight: 600;
+}
+.key-mask:hover, .key-single:hover {
+    background-color: var(--bs-gray-400);
+}
+.key-split {
+    background-color: #e0cffc;
+    padding: 0 0.15rem;
+}
+.key-split:hover {
+    background-color: #c29ffa;
+}
+.key-single {
+    color: var(--bs-gray-600);
+}
+.index-label {
+    flex-grow: 1;
+    min-width: 0;
+}
+.index-stacks {
+    columns: 2 32rem;
+    column-gap: 2rem;
+}
+.index-stack {
+    break-inside: avoid;
+}
